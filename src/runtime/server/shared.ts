@@ -140,3 +140,9 @@ export class TtlCache<T> {
     return value
   }
 }
+
+type Fetcher = <T = unknown>(url: string, options?: Record<string, unknown>) => Promise<T>
+
+/** Nitro's global `$fetch` (ofetch), typed without depending on nitropack. */
+export const gatewayFetch: Fetcher = (url, options) =>
+  (globalThis as unknown as { $fetch: Fetcher }).$fetch(url, options)

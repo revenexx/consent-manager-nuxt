@@ -1,6 +1,6 @@
 import { createError, defineEventHandler, getCookie, getRequestHeader, getRequestHeaders, readRawBody } from 'h3'
 import { useRuntimeConfig } from '#imports'
-import { MAX_RECORD_BYTES, RecordThrottle, decisionKey, gatewayHeaders, marketOf, resolveCredentials, sanitizeRecord } from '../shared'
+import { MAX_RECORD_BYTES, RecordThrottle, decisionKey, gatewayHeaders, marketOf, resolveCredentials, sanitizeRecord , gatewayFetch } from '../shared'
 
 const throttle = new RecordThrottle()
 
@@ -36,7 +36,7 @@ export default defineEventHandler(async (event) => {
   const market = marketOf(headers, getCookie(event, server.marketCookie))
   const base = server.apiUrl.replace(/\/+$/, '').replace(/\/v1$/, '')
   try {
-    await $fetch(`${base}/v1/consent-manager/records`, { method: 'POST', body, headers: gatewayHeaders(credentials, market), retry: 0, timeout: 5000 })
+    await gatewayFetch(`${base}/v1/consent-manager/records`, { method: 'POST', body, headers: gatewayHeaders(credentials, market), retry: 0, timeout: 5000 })
   }
   catch (err: unknown) {
     const status = (err as { statusCode?: number }).statusCode ?? 502

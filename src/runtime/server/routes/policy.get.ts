@@ -1,6 +1,6 @@
 import { defineEventHandler, getCookie, getQuery, getRequestHeaders, setResponseStatus } from 'h3'
 import { useRuntimeConfig } from '#imports'
-import { TtlCache, gatewayHeaders, marketOf, resolveCredentials } from '../shared'
+import { TtlCache, gatewayHeaders, marketOf, resolveCredentials , gatewayFetch } from '../shared'
 
 /**
  * GET /_consent-manager/policy — the published policy of this shop's market,
@@ -13,7 +13,7 @@ const cache = new TtlCache<{ policy: unknown, reason: string | null }>(60_000)
 async function fetchPolicy(url: string, headers: Record<string, string>, key: string) {
   return cache.get(key, async () => {
     try {
-      const policy = await $fetch(url, { headers, retry: 0, timeout: 4000 })
+      const policy = await gatewayFetch(url, { headers, retry: 0, timeout: 4000 })
       return { policy, reason: null }
     }
     catch (err: unknown) {
@@ -40,7 +40,7 @@ export default defineEventHandler(async (event) => {
   if (preview) {
     // A preview is never cached: it is one person reading a draft.
     try {
-      const policy = await $fetch(`${base}/v1/consent-manager/delivery/preview/${encodeURIComponent(preview)}`, { headers: gatewayHeaders(credentials, market), retry: 0, timeout: 4000 })
+      const policy = await gatewayFetch(`${base}/v1/consent-manager/delivery/preview/${encodeURIComponent(preview)}`, { headers: gatewayHeaders(credentials, market), retry: 0, timeout: 4000 })
       return { policy, reason: null }
     }
     catch {
