@@ -2,7 +2,9 @@ import vue from '@vitejs/plugin-vue'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
-  plugins: [vue()],
+  // @vitejs/plugin-vue is typed against the Vite that Nuxt brings, vitest
+  // against its own; the plugin is the same object at runtime.
+  plugins: [vue() as never],
   test: {
     projects: [
       { extends: true, test: { name: 'unit', include: ['test/unit/**/*.test.ts'], environment: 'node' } },
