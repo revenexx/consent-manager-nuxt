@@ -1,0 +1,1 @@
+# @revenexx/consent-manager-nuxt
