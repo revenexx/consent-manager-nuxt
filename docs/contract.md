@@ -40,9 +40,10 @@ first-party cookies and storage keys (`_ga_<container-id>` style names match as 
 
 ## Decisions
 
-- **Accept all** grants every consent purpose.
+- **Accept all** grants every consent and legitimate-interest purpose.
 - **Reject all** and **withdraw** deny every consent purpose and object to every
-  legitimate-interest purpose and vendor.
+  legitimate-interest purpose and to every vendor whose `legal_basis_override` is legitimate
+  interest. Withdraw also mints a new consent id.
 - **Save** stores the purposes as chosen; a consent purpose left untouched is denied.
 - **Load once** (`vendor_grant`) grants one vendor and keeps everything else.
 

@@ -1,16 +1,23 @@
 {
   "name": "@revenexx/consent-manager-nuxt",
   "version": "0.0.0",
-  "description": "Nuxt module for the revenexx Consent Manager: an SSR-rendered consent banner without a third-party script, the rvx_consent cookie, Google Consent Mode v2, <ConsentGate> content blocking and a ConsentProvider for @nuxt/scripts.",
+  "description": "Server-rendered cookie consent for Nuxt without a third-party script: an SSR consent banner, the rvx_consent cookie, Google Consent Mode v2, <ConsentGate> content blocking and a consent trigger for @nuxt/scripts, driven by the revenexx Consent Manager.",
   "keywords": [
     "nuxt",
     "nuxt-module",
+    "nuxt4",
     "consent",
+    "consent-management",
+    "cookie-consent",
     "cookie-banner",
     "gdpr",
+    "dsgvo",
     "tdddg",
-    "consent-mode",
+    "privacy",
+    "google-consent-mode",
+    "consent-mode-v2",
     "nuxt-scripts",
+    "ssr",
     "revenexx"
   ],
   "homepage": "https://github.com/revenexx/consent-manager-nuxt#readme",
@@ -35,7 +42,8 @@
   "main": "./dist/module.mjs",
   "types": "./dist/types.d.mts",
   "files": [
-    "dist"
+    "dist",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "nuxt-module-build prepare && nuxt-module-build build",
