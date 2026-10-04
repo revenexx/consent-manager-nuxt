@@ -21,11 +21,22 @@ export interface ModuleOptions {
   previewQuery: string
   /** Reload after a withdrawal revoked a loaded vendor — scripts cannot be unloaded. Default true. */
   reloadOnRevoke: boolean
-  /** Gateway base URL. Runtime: NUXT_CONSENT_MANAGER_API_URL (falls back to NUXT_REVENEXX_API_URL). */
+  /**
+   * Gateway base URL. Read at runtime: NUXT_CONSENT_MANAGER_API_URL, else
+   * NUXT_REVENEXX_API_URL, else this value.
+   */
   apiUrl: string
-  /** Gateway tenant for local dev — a deployed Site uses the brokered context. Runtime: NUXT_CONSENT_MANAGER_TENANT. */
+  /**
+   * Gateway tenant for local dev — a deployed Site uses the brokered context.
+   * Read at runtime: NUXT_CONSENT_MANAGER_TENANT, else NUXT_REVENEXX_TENANT.
+   * A value set here is part of the build; pass it through the environment instead.
+   */
   tenant: string
-  /** Gateway API key for local dev, server-only. Runtime: NUXT_CONSENT_MANAGER_API_KEY. */
+  /**
+   * Gateway API key for local dev, server-only. Read at runtime:
+   * NUXT_CONSENT_MANAGER_API_KEY, else NUXT_REVENEXX_API_KEY. A value set here
+   * is part of the server build; pass it through the environment instead.
+   */
   apiKey: string
 }
 
@@ -44,9 +55,13 @@ export default defineNuxtModule<ModuleOptions>({
     marketCookie: 'cover-market',
     previewQuery: 'rvx_consent_preview',
     reloadOnRevoke: true,
-    apiUrl: process.env.NUXT_REVENEXX_API_URL || 'https://api.revenexx.com',
-    tenant: process.env.NUXT_REVENEXX_TENANT || '',
-    apiKey: process.env.NUXT_REVENEXX_API_KEY || '',
+    // Never read from process.env here: whatever the module sets up is
+    // serialized into the server build. Credentials are read at runtime only
+    // (runtime config env overrides, then the NUXT_REVENEXX_* fallback in the
+    // server routes).
+    apiUrl: '',
+    tenant: '',
+    apiKey: '',
   },
   async setup(options, nuxt) {
     const { resolve } = createResolver(import.meta.url)
@@ -55,6 +70,7 @@ export default defineNuxtModule<ModuleOptions>({
     // theme did not list it, so the trigger always resolves.
     if (!hasNuxtModule('@nuxt/scripts')) await installModule('@nuxt/scripts')
 
+    // Server-only: nothing here reaches runtimeConfig.public or the client.
     nuxt.options.runtimeConfig.consentManager = defu(nuxt.options.runtimeConfig.consentManager as object, {
       apiUrl: options.apiUrl,
       tenant: options.tenant,

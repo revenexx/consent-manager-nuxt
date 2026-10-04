@@ -1,6 +1,6 @@
 import { createError, defineEventHandler, getCookie, getRequestHeader, getRequestHeaders, readRawBody } from 'h3'
 import { useRuntimeConfig } from '#imports'
-import { MAX_RECORD_BYTES, RecordThrottle, decisionKey, gatewayHeaders, marketOf, resolveCredentials, sanitizeRecord , gatewayFetch } from '../shared'
+import { MAX_RECORD_BYTES, RecordThrottle, decisionKey, gatewayHeaders, marketOf, resolveCredentials, sanitizeRecord, gatewayFetch, serverConfig } from '../shared'
 
 const throttle = new RecordThrottle()
 
@@ -30,7 +30,8 @@ export default defineEventHandler(async (event) => {
   if (verdict === 'rate_limited') throw createError({ statusCode: 429, statusMessage: 'Too Many Requests' })
 
   const config = useRuntimeConfig(event)
-  const server = config.consentManager as { apiUrl: string, tenant: string, apiKey: string, marketCookie: string }
+  const own = config.consentManager as { apiUrl: string, tenant: string, apiKey: string, marketCookie: string }
+  const server = { ...serverConfig(own), marketCookie: own.marketCookie }
   const credentials = resolveCredentials(headers, server)
   if (!credentials.tenant || (!credentials.jwt && !credentials.apiKey)) throw createError({ statusCode: 503, statusMessage: 'Service Unavailable' })
   const market = marketOf(headers, getCookie(event, server.marketCookie))

@@ -1,6 +1,6 @@
 import { defineEventHandler, getCookie, getQuery, getRequestHeaders, setResponseStatus } from 'h3'
 import { useRuntimeConfig } from '#imports'
-import { TtlCache, gatewayHeaders, marketOf, resolveCredentials , gatewayFetch } from '../shared'
+import { TtlCache, gatewayHeaders, marketOf, resolveCredentials, gatewayFetch, serverConfig } from '../shared'
 
 /**
  * GET /_consent-manager/policy — the published policy of this shop's market,
@@ -27,7 +27,8 @@ async function fetchPolicy(url: string, headers: Record<string, string>, key: st
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig(event)
-  const server = config.consentManager as { apiUrl: string, tenant: string, apiKey: string, marketCookie: string }
+  const own = config.consentManager as { apiUrl: string, tenant: string, apiKey: string, marketCookie: string }
+  const server = { ...serverConfig(own), marketCookie: own.marketCookie }
   const headers = getRequestHeaders(event) as Record<string, string | undefined>
   const credentials = resolveCredentials(headers, server)
   if (!credentials.tenant || (!credentials.jwt && !credentials.apiKey)) {

@@ -18,6 +18,23 @@ export interface ServerConfig {
   apiKey: string
 }
 
+export const DEFAULT_API_URL = 'https://api.revenexx.com'
+
+/**
+ * The gateway settings of this request, resolved at runtime and never at build
+ * time: the module's runtime config (NUXT_CONSENT_MANAGER_* overrides it), else
+ * the shop-wide NUXT_REVENEXX_* variables, else the public gateway. Nothing
+ * from the build machine's environment is baked into the output.
+ */
+export function serverConfig(config: Partial<ServerConfig> | undefined, env: Record<string, string | undefined> = process.env): ServerConfig {
+  const pick = (own: string | undefined, fallback: string | undefined) => (own || '').trim() || (fallback || '').trim()
+  return {
+    apiUrl: pick(config?.apiUrl, env.NUXT_REVENEXX_API_URL) || DEFAULT_API_URL,
+    tenant: pick(config?.tenant, env.NUXT_REVENEXX_TENANT),
+    apiKey: pick(config?.apiKey, env.NUXT_REVENEXX_API_KEY),
+  }
+}
+
 /**
  * Who this request talks to the gateway as — the approach of
  * `@revenexx/cover`'s revenexxCredentials, without importing it:

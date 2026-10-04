@@ -5,7 +5,7 @@ where:
   - Every server-rendered page of a theme that installs the module
   - The routes /_consent-manager/policy and /_consent-manager/record
 ticket: RAD-181
-updated: 2026-10-03
+updated: 2026-10-04
 ---
 
 # The storefront consent module
@@ -94,3 +94,11 @@ whether a vendor may load. Each criterion is claimed by a test tagged
 - **When** the decision applies
 - **Then** the `consent-manager:change` hook, the `revenexx:consent` event and a Consent Mode update carry the state and never the id
 - verify: unit
+
+### AC-12 — No gateway credential is part of a build
+
+- **Given** a gateway tenant and API key in the environment while the shop is built
+- **When** the build finishes
+- **Then** no file of the build output contains either of them
+- **Because** a build artifact is shared, cached and deployed far more widely than a runtime secret
+- verify: unit, ssr

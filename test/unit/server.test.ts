@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { RecordThrottle, TtlCache, decisionKey, gatewayHeaders, marketOf, resolveCredentials, sanitizeRecord } from '../../src/runtime/server/shared'
+import { RecordThrottle, TtlCache, decisionKey, gatewayHeaders, marketOf, resolveCredentials, sanitizeRecord, serverConfig } from '../../src/runtime/server/shared'
 
 const config = { apiUrl: 'https://api.revenexx.com', tenant: 'acme', apiKey: 'rvxk_local' }
 
@@ -76,5 +76,14 @@ describe('the record route', () => {
     await expect(cache.get('x', async () => { throw new Error('down') }, 0)).rejects.toThrow()
     await new Promise(r => setTimeout(r, 0))
     expect(await cache.get('x', async () => 7, 1)).toBe(7)
+  })
+})
+
+describe('runtime gateway settings', () => {
+  it('reads the module config first, then the shop-wide variables, at request time [@spec:module-contract:AC-12]', () => {
+    const env = { NUXT_REVENEXX_API_URL: 'https://gw.example', NUXT_REVENEXX_TENANT: 'shop', NUXT_REVENEXX_API_KEY: 'rvxk_shop' }
+    expect(serverConfig({ apiUrl: '', tenant: '', apiKey: '' }, env)).toEqual({ apiUrl: 'https://gw.example', tenant: 'shop', apiKey: 'rvxk_shop' })
+    expect(serverConfig({ apiUrl: '', tenant: 'acme', apiKey: 'rvxk_acme' }, env)).toMatchObject({ tenant: 'acme', apiKey: 'rvxk_acme' })
+    expect(serverConfig(undefined, {})).toEqual({ apiUrl: 'https://api.revenexx.com', tenant: '', apiKey: '' })
   })
 })
