@@ -1,6 +1,6 @@
 {
   "name": "@revenexx/consent-manager-nuxt",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Server-rendered cookie consent for Nuxt without a third-party script: an SSR consent banner, the rvx_consent cookie, Google Consent Mode v2, <ConsentGate> content blocking and a consent trigger for @nuxt/scripts, driven by the revenexx Consent Manager.",
   "keywords": [
     "nuxt",
