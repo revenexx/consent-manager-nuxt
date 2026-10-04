@@ -87,6 +87,14 @@ describe('server-rendered HTML', () => {
     expect(html).not.toMatch(/<iframe/)
   })
 
+  it('renders the exempt-path layout from the requested route, as the browser will', async () => {
+    const exempt = await $fetch<string>('/datenschutz')
+    expect(exempt).toMatch(/class="[^"]*rvx-consent--bar[^"]*rvx-consent--exempt/)
+    const normal = await $fetch<string>('/produkte')
+    expect(normal).toContain('rvx-consent--box')
+    expect(normal).not.toContain('rvx-consent--exempt')
+  })
+
   it('shows no banner and no optional script on editor hosts and paths [@spec:module-contract:AC-6]', async () => {
     for (const [path, headers] of [['/', { 'x-forwarded-host': 'acme.theme.rvnxx.site' }], ['/admin/pages', {}], ['/preview/home', {}]] as const) {
       const html = await $fetch<string>(path, { headers: { ...headers, cookie: `rvx_consent=${granted}` } })

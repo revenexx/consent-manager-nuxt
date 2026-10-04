@@ -44,6 +44,8 @@ export interface ConsentManager {
   state: ComputedRef<ConsentState>
   decided: ComputedRef<boolean>
   showBanner: ComputedRef<boolean>
+  /** The current route path — for exempt paths and the record. */
+  path: () => string
   allows: (vendor: string, purpose?: string) => boolean
   googleSignals: () => ReturnType<typeof googleSignals>
   /** Open the banner; `from` is the surface a record will name. */
@@ -79,9 +81,14 @@ export function createConsentManager(options: {
   const layer = ref<'first' | 'preferences'>('first')
   const openedFrom = ref<RecordSurface>('first_layer')
   const listeners = new Set<(state: ConsentState) => void>()
+  // A preview always asks again on load; within the page a decision settles it.
+  const previewDecided = ref(false)
 
   const state = computed(() => stateOf(policy.value, cookie.value, options.editor, now()))
-  const decided = computed(() => !needsDecision(policy.value, cookie.value, options.editor, now()))
+  const decided = computed(() => {
+    if (policy.value?.version.preview && !options.editor) return previewDecided.value
+    return !needsDecision(policy.value, cookie.value, options.editor, now())
+  })
   const showBanner = computed(() => !options.editor && Boolean(policy.value) && (isOpen.value || !decided.value))
 
   function allows(vendor: string, purpose?: string): boolean {
@@ -117,6 +124,7 @@ export function createConsentManager(options: {
     env.writeCookie(encodeConsentCookie(next), Math.round((Number(p.settings.consent_lifetime_days) || 365) * 86_400))
     isOpen.value = false
     layer.value = 'first'
+    if (p.version.preview) previewDecided.value = true
 
     if (!p.version.preview && p.version.id) {
       const body = {
@@ -153,6 +161,7 @@ export function createConsentManager(options: {
     state,
     decided,
     showBanner,
+    path: () => env.path(),
     allows,
     googleSignals: () => googleSignals(policy.value, cookie.value, options.editor, now()),
     open(which = 'preferences', from) {

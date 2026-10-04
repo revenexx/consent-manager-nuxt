@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, inject, nextTick, reactive, ref, useId, watch } from 'vue'
+import { computed, inject, nextTick, reactive, ref, useId, useSlots, watch } from 'vue'
 import { CONSENT_MANAGER } from '../manager'
 import { isExemptPath } from '../core'
 import { label } from '../labels'
@@ -15,7 +15,7 @@ import type { Decision } from '../types'
 const props = defineProps<{
   /** Force a layout instead of the policy's (box | bar | modal). */
   layout?: 'box' | 'bar' | 'modal'
-  /** The current path, when it cannot be read from the window (SSR in tests). */
+  /** Override the path the exempt-path check uses. Defaults to the current route's path. */
   path?: string
 }>()
 
@@ -28,9 +28,14 @@ const policy = computed(() => m.policy.value)
 const texts = computed(() => policy.value?.locales[m.locale.value]?.banner)
 const localized = computed(() => policy.value?.locales[m.locale.value])
 const t = (key: string) => label(texts.value as Record<string, unknown> | undefined, m.locale.value, key)
-const currentPath = computed(() => props.path ?? (import.meta.client ? window.location.pathname : '/'))
+const currentPath = computed(() => props.path ?? m.path())
 const exempt = computed(() => isExemptPath(policy.value, currentPath.value))
 const layout = computed(() => (exempt.value ? 'bar' : props.layout ?? policy.value?.settings.banner_layout ?? 'box'))
+// A slot that replaces a whole layer also replaces the heading aria-labelledby
+// points to; the dialog then carries the layer's title as its aria-label.
+const slots = useSlots()
+const layerReplaced = computed(() => Boolean(m.layer.value === 'first' ? slots['first-layer'] : slots.preferences))
+const ariaLabel = computed(() => (layerReplaced.value ? t(m.layer.value === 'first' ? 'title' : 'preferences_title') : undefined))
 const showCookies = computed(() => policy.value?.settings.show_cookie_details !== false)
 
 const basisOf = (code: string) => policy.value?.purposes.find(p => p.code === code)?.legal_basis ?? 'consent'
@@ -104,7 +109,8 @@ const api = computed(() => ({
     :class="[`rvx-consent--${layout}`, { 'rvx-consent--exempt': exempt }]"
     role="dialog"
     :aria-modal="layout === 'modal' ? 'true' : 'false'"
-    :aria-labelledby="titleId"
+    :aria-labelledby="layerReplaced ? undefined : titleId"
+    :aria-label="ariaLabel"
     data-consent-banner
     @keydown="onKeydown"
   >

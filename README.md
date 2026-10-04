@@ -140,7 +140,8 @@ browser ──► visitor decides ──► cookie rvx_consent written
 **When the banner shows.** It shows when there is no valid `rvx_consent` cookie, when the
 cookie predates the latest *material* policy version, or when it is older than the policy's
 `consent_lifetime_days` (365 if unset). A malformed cookie counts as no cookie. When the policy
-is being previewed, the banner always shows.
+is being previewed, the banner shows on every page load and closes after a decision on that page.
+The decision is not recorded.
 
 **What "allowed" means.** `allows(vendor, purpose)` is `false` in an editor context, without a
 policy, for a vendor not in the policy and for a purpose that vendor does not serve. Otherwise
@@ -185,11 +186,11 @@ All options go under `consentManager` in `nuxt.config.ts`.
 | `cookieName` | `string` | `'rvx_consent'` | Name of the visitor-state cookie. The name is part of the shared contract with other revenexx packages, so change it only for tests. |
 | `dataLayerName` | `string` | `'dataLayer'` | The global the Consent Mode commands are pushed to (`window[dataLayerName]`). |
 | `marketCookie` | `string` | `'cover-market'` | Cookie that holds the storefront's market code. It is forwarded as `x-revenexx-market` when the request has no such header. Server-only. |
-| `previewQuery` | `string` | `'rvx_consent_preview'` | Query parameter that carries a policy preview token. `?rvx_consent_preview=<token>` renders the unpublished draft. Decisions made in a preview are not recorded. |
+| `previewQuery` | `string` | `'rvx_consent_preview'` | Query parameter that carries a policy preview token. `?rvx_consent_preview=<token>` renders the unpublished draft. The banner shows on every page load and closes after a decision; decisions made in a preview are not recorded. |
 | `reloadOnRevoke` | `boolean` | `true` | Reload after a decision revoked a vendor that was allowed before, so its scripts stop running. |
-| `apiUrl` | `string` | `'https://api.revenexx.com'` | Gateway base URL, with or without a trailing `/v1`. Server-only. |
-| `tenant` | `string` | `''` | Gateway tenant for local development. A deployed revenexx Site uses the brokered context instead. Server-only. |
-| `apiKey` | `string` | `''` | Gateway API key for local development. Server-only, never sent to the browser. |
+| `apiUrl` | `string` | `''` → `'https://api.revenexx.com'` | Gateway base URL, with or without a trailing `/v1`. Server-only. |
+| `tenant` | `string` | `''` | Gateway tenant for local development. A deployed revenexx Site uses the brokered context instead. Server-only. Prefer the environment variable: a value written here is part of the build. |
+| `apiKey` | `string` | `''` | Gateway API key for local development. Server-only, never sent to the browser. Prefer the environment variable: a value written here is part of the server build. |
 
 The layout (`box` / `bar` / `modal`), the consent lifetime, the exempt paths, whether the cookie
 table is shown and whether Consent Mode is on are **policy settings** in the Consent Manager
@@ -222,10 +223,15 @@ The options map to runtime config, so you can set them with environment variable
 | `NUXT_CONSENT_MANAGER_MARKET_COOKIE` | `consentManager.marketCookie` | server |
 | `NUXT_PUBLIC_CONSENT_MANAGER_COOKIE_NAME`, `…_DATA_LAYER_NAME`, `…_EXEMPT_ON_EDITOR_HOSTS`, `…_EDITOR_HOSTS`, `…_EDITOR_PATHS`, `…_PREVIEW_QUERY`, `…_RELOAD_ON_REVOKE` | `public.consentManager.*` | public |
 
-> **Build-time defaults.** If `NUXT_REVENEXX_API_URL`, `NUXT_REVENEXX_TENANT` or
-> `NUXT_REVENEXX_API_KEY` are set **while `nuxt build` runs**, they become the defaults for
-> `apiUrl`, `tenant` and `apiKey`. That stores them in the server build output. For anything
-> other than local development, set the `NUXT_CONSENT_MANAGER_*` variables at runtime instead.
+**Fallback.** When a `NUXT_CONSENT_MANAGER_*` value is empty, the server routes fall back to the
+shop-wide `NUXT_REVENEXX_API_URL`, `NUXT_REVENEXX_TENANT` and `NUXT_REVENEXX_API_KEY`, then to
+`https://api.revenexx.com` for the URL.
+
+> **Credentials are read at runtime only.** Since 0.1.1 the module reads no environment variable
+> while `nuxt build` runs, so a key present on the build machine never ends up in `.output`.
+> (0.1.0 copied `NUXT_REVENEXX_*` into the server build as defaults — rebuild with 0.1.1 and
+> rotate the key if you built with it set.) Writing `apiKey` or `tenant` into `nuxt.config`
+> still bakes them into the build, so keep them in the environment.
 
 The market is the incoming `x-revenexx-market` header if there is one. Otherwise it is the
 value of the `marketCookie` cookie, if it is a plain code of up to 32 characters (letters,
@@ -244,7 +250,7 @@ the visitor reopened it. Place it once, for example in `app.vue`.
 | Prop | Type | Default | Description |
 | --- | --- | --- | --- |
 | `layout` | `'box' \| 'bar' \| 'modal'` | policy's `banner_layout`, else `'box'` | Force a layout. On a path listed in the policy's `banner_exempt_paths` (for example the privacy page) the layout is always `bar`, so the page underneath stays readable. |
-| `path` | `string` | `window.location.pathname` (client), `'/'` (server) | The current path, used for the exempt-path check. Pass `useRoute().path` if exempt paths must take effect during SSR. |
+| `path` | `string` | the current route's path | Override the path used for the exempt-path check. Not needed normally: the default is the router's current path on the server and in the browser alike, so the exempt layout renders during SSR and hydrates without a mismatch. |
 
 | Slot | Slot props | Replaces |
 | --- | --- | --- |
@@ -271,7 +277,9 @@ the visitor reopened it. Place it once, for example in `app.vue`.
 | `toggle` | `(code: string, on: boolean) => void` | Toggle one purpose. Switching off a legitimate-interest purpose records an objection. |
 
 If you replace `actions`, keep **Reject all** next to **Accept all**. Accessibility: the banner is
-`role="dialog"`, can be operated by keyboard and has visible focus. `Escape` closes it once a
+`role="dialog"`, can be operated by keyboard and has visible focus. It is named by its heading
+through `aria-labelledby`; when a `first-layer` or `preferences` slot replaces that heading, the
+dialog carries the layer's title (`title` / `preferences_title`) as `aria-label` instead. `Escape` closes it once a
 decision exists. Only the `modal` layout traps focus. Focus returns to where it was after the
 decision. Styling and CSS variables: [docs/theming.md](./docs/theming.md).
 
@@ -299,7 +307,8 @@ buttons. The buttons are hidden in editor context and when no policy is loaded.
 ### `<ConsentPreferencesLink>`
 
 A `<button>` that reopens the settings layer with the current decisions preset. Put it in the
-footer and on the privacy page. It is not rendered in editor context.
+footer and on the privacy page. It is not rendered in editor context, nor while no policy is
+loaded (not configured, nothing published, gateway unreachable), since there is no choice to open.
 
 | Slot | Slot props | Description |
 | --- | --- | --- |

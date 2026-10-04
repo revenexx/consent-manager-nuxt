@@ -11,7 +11,10 @@ import { label } from '../labels'
  */
 const props = defineProps<{
   vendor: string
-  /** The purpose to check; defaults to the vendor's first purpose. */
+  /**
+   * The purpose to check. Without it the gate opens as soon as ANY purpose of
+   * the vendor is allowed — name one to require that purpose specifically.
+   */
   purpose?: string
   /** A self-hosted preview image — never the vendor's own thumbnail URL. */
   thumbnail?: string

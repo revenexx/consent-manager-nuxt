@@ -197,12 +197,9 @@ Use the default slot for your own label:
 
 A visitor who has not decided yet must still be able to read the privacy page and the imprint.
 Add those paths to `banner_exempt_paths` in the policy. On them the banner is shown as a bar
-instead of a box or modal, so the content stays readable. To get the exempt layout during SSR
-already, pass the route path:
-
-```vue
-<ConsentBanner :path="useRoute().path" />
-```
+instead of a box or modal, so the content stays readable. The banner reads the current route
+on the server and in the browser, so the exempt layout is already in the server-rendered HTML.
+The `path` prop overrides it when needed.
 
 The banner itself links to `privacy_url` and `imprint_url` when the policy texts contain them.
 
@@ -236,8 +233,8 @@ Open any page with the preview token from the Consent Manager app:
 https://shop.example.com/?rvx_consent_preview=<token>
 ```
 
-The draft policy is fetched uncached and the banner always shows. Decisions made in a preview
-set the cookie in that browser but are **not** recorded. Change the parameter name with
+The draft policy is fetched uncached and the banner shows on every page load; a decision closes it
+for that page. Decisions made in a preview set the cookie in that browser but are **not** recorded. Change the parameter name with
 `previewQuery`.
 
 ## Local development against a tenant

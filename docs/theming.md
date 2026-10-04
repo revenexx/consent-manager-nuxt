@@ -68,6 +68,10 @@ prevent.
 
 `<ConsentPreferencesLink>`: the default slot receives `{ text }`.
 
+Replacing `first-layer` or `preferences` also replaces the heading the dialog's
+`aria-labelledby` points to. The banner then names the dialog with `aria-label` (the policy's
+`title` or `preferences_title`), so it keeps an accessible name without extra markup.
+
 ## Layouts
 
 | Layout | Position | Page behind | Focus trap |

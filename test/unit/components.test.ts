@@ -7,21 +7,21 @@ import ConsentGate from '../../src/runtime/components/ConsentGate.vue'
 import ConsentPreferencesLink from '../../src/runtime/components/ConsentPreferencesLink.vue'
 import { CONSENT_MANAGER, createConsentManager } from '../../src/runtime/manager'
 import { decide, encodeConsentCookie } from '../../src/runtime/core'
-import type { ConsentCookie, ConsentState } from '../../src/runtime/types'
+import type { ConsentCookie, ConsentState, DeliveredPolicy } from '../../src/runtime/types'
 import { makePolicy } from '../fixtures/policy'
 
-function setup(options: { cookie?: ConsentCookie | null, editor?: boolean, sendRecord?: (b: Record<string, unknown>) => Promise<void> } = {}) {
+function setup(options: { cookie?: ConsentCookie | null, editor?: boolean, policy?: DeliveredPolicy | null, path?: string, sendRecord?: (b: Record<string, unknown>) => Promise<void> } = {}) {
   const env = {
     writeCookie: vi.fn(),
     sendRecord: vi.fn(options.sendRecord ?? (async () => {})),
-    path: () => '/produkte',
+    path: () => options.path ?? '/produkte',
     gtag: vi.fn(),
     emit: vi.fn(),
     forget: vi.fn(),
     reload: vi.fn(),
     queue: vi.fn(),
   }
-  const manager = createConsentManager({ policy: makePolicy(), cookie: options.cookie ?? null, editor: options.editor ?? false, locale: 'de', env, userAgent: 'Mozilla/5.0 Firefox/131.0' })
+  const manager = createConsentManager({ policy: options.policy === undefined ? makePolicy() : options.policy, cookie: options.cookie ?? null, editor: options.editor ?? false, locale: 'de', env, userAgent: 'Mozilla/5.0 Firefox/131.0' })
   const global = { provide: { [CONSENT_MANAGER as symbol]: manager } }
   return { manager, env, global }
 }
@@ -62,6 +62,58 @@ describe('ConsentBanner', () => {
     expect(wrapper.find('[data-consent-banner]').exists()).toBe(false)
   })
 
+  it('closes after a decision in a policy preview, without writing a record', async () => {
+    const { global, env, manager } = setup({ policy: makePolicy({ preview: true }) })
+    const wrapper = mount(ConsentBanner, { props: { path: '/produkte' }, global })
+    expect(wrapper.find('[data-consent-banner]').exists()).toBe(true)
+    await wrapper.get('[data-consent-action="accept_all"]').trigger('click')
+    await nextTick()
+    expect(env.sendRecord).not.toHaveBeenCalled()
+    expect(env.queue).not.toHaveBeenCalled()
+    expect(manager.decided.value).toBe(true)
+    expect(wrapper.find('[data-consent-banner]').exists()).toBe(false)
+    manager.open('preferences', 'privacy_link')
+    await nextTick()
+    expect(wrapper.find('[data-consent-banner]').exists()).toBe(true)
+  })
+
+  it('takes the exempt-path layout from the current route when no path is passed', () => {
+    const { global } = setup({ path: '/datenschutz' })
+    const wrapper = mount(ConsentBanner, { global })
+    expect(wrapper.get('[data-consent-banner]').classes()).toContain('rvx-consent--bar')
+  })
+
+  it('keeps an accessible name when a slot replaces the titled layer', async () => {
+    const { global, manager } = setup()
+    const wrapper = mount(ConsentBanner, {
+      props: { path: '/produkte' },
+      global,
+      attachTo: document.body,
+      slots: {
+        'first-layer': () => h('div', { class: 'own' }, 'Eigener Text'),
+        'preferences': () => h('div', { class: 'own-preferences' }, 'Eigene Einstellungen'),
+      },
+    })
+    for (const which of ['first', 'preferences'] as const) {
+      manager.layer.value = which
+      await nextTick()
+      const dialog = wrapper.get('[data-consent-banner]')
+      const labelledBy = dialog.attributes('aria-labelledby')
+      if (labelledBy) expect(document.getElementById(labelledBy), which).not.toBeNull()
+      else expect(dialog.attributes('aria-label'), which).toBe(which === 'first' ? 'Ihre Privatsphäre' : 'Cookie-Einstellungen')
+    }
+    wrapper.unmount()
+  })
+
+  it('points aria-labelledby at its own title when the layer is not replaced', () => {
+    const { global } = setup()
+    const wrapper = mount(ConsentBanner, { props: { path: '/produkte' }, global, attachTo: document.body })
+    const id = wrapper.get('[data-consent-banner]').attributes('aria-labelledby')!
+    expect(document.getElementById(id)?.tagName).toBe('H2')
+    expect(wrapper.get('[data-consent-banner]').attributes('aria-label')).toBeUndefined()
+    wrapper.unmount()
+  })
+
   it('renders nothing in an editor context [@spec:module-contract:AC-6]', () => {
     const { global } = setup({ editor: true })
     expect(mount(ConsentBanner, { global }).find('[data-consent-banner]').exists()).toBe(false)
@@ -70,6 +122,11 @@ describe('ConsentBanner', () => {
 })
 
 describe('ConsentPreferencesLink', () => {
+  it('renders nothing while no policy is loaded', () => {
+    const { global } = setup({ policy: null })
+    expect(mount(ConsentPreferencesLink, { global }).find('button').exists()).toBe(false)
+  })
+
   it('reopens the second layer with the current decisions preset [@spec:module-contract:AC-4]', async () => {
     const { global, manager, env } = setup({ cookie: decided({ purposes: { statistics: 'granted' } }) })
     const wrapper = mount({ render: () => [h(ConsentPreferencesLink), h(ConsentBanner, { path: '/produkte' })] }, { global })

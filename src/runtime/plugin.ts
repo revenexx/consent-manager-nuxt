@@ -87,7 +87,10 @@ const plugin: Plugin<{ consentManager: ConsentManager }> = defineNuxtPlugin({
           document.cookie = parts.join('; ')
         },
         sendRecord: body => $fetch('/_consent-manager/record', { method: 'POST', body }).then(() => undefined),
-        path: () => (import.meta.client ? window.location.pathname : url.pathname),
+        // The router's current route: the same on the server and in the browser
+        // (no hydration mismatch), and reactive across client navigation.
+        path: () => (nuxtApp.$router as { currentRoute?: { value?: { path?: string } } } | undefined)?.currentRoute?.value?.path
+          || (import.meta.client ? window.location.pathname : url.pathname),
         gtag: (...args) => {
           if (import.meta.server) return
           const w = window as unknown as Record<string, unknown[] | undefined>
