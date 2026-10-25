@@ -1,0 +1,12 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: "consent-manager-nuxt"
+  description: "Nuxt module for the revenexx Consent Manager: SSR consent banner without third-party scripts, Google Consent Mode v2, ConsentGate."
+  annotations:
+    github.com/project-slug: revenexx/consent-manager-nuxt
+spec:
+  type: library
+  owner: group:default/frontend-engineering
+  system: revenue-cloud
+  lifecycle: experimental
