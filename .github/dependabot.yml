@@ -11,6 +11,11 @@ updates:
     commit-message:
       prefix: "chore(deps)"
     ignore:
+      # h3 is a runtime dependency: the server routes run inside the app's
+      # Nitro, and Nuxt 4 runs Nitro 2 on h3 1. Out again when Nuxt moves to
+      # h3 2 (Nitro 3).
+      - dependency-name: "h3"
+        update-types: ["version-update:semver-major"]
       # The types follow the Node release the image runs (22), not ahead of it.
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
